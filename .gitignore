@@ -1,2 +1,7 @@
 target
 *_proof.json
+CLAUDE.md
+.cursor
+demo_output
+e2e_test_output
+**/keypair.json

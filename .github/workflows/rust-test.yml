@@ -1,0 +1,92 @@
+name: Rust CLI Testing
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+permissions: read-all
+
+jobs:
+  fmt:
+    name: Format Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt
+
+      - name: Check Rust formatting
+        run: cargo fmt --check
+        working-directory: pons_cli
+
+  clippy:
+    name: Clippy Lints
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+
+      - name: Setup Rust cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: pons_cli -> target
+
+      - name: Run Clippy
+        run: cargo clippy --all-targets --all-features -- -D warnings
+        working-directory: pons_cli
+
+  test:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Setup Rust cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: pons_cli -> target
+
+      - name: Run tests
+        run: cargo test
+        working-directory: pons_cli
+
+  build:
+    name: Build Release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Setup Rust cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: pons_cli -> target
+
+      - name: Build release binary
+        run: cargo build --release
+        working-directory: pons_cli
+
+      - name: Upload binary artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: pons-cli-binary
+          path: pons_cli/target/release/pons-cli
+          retention-days: 1

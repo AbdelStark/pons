@@ -1,0 +1,65 @@
+name: Cairo Testing
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions: read-all
+
+jobs:
+  fmt:
+    name: Format Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Scarb
+        uses: software-mansion/setup-scarb@v1.3.2
+        with:
+          scarb-version: "2.11.4"
+
+      - name: Check Cairo formatting
+        run: scarb fmt --check
+        working-directory: pons_stark
+
+  test:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Scarb
+        uses: software-mansion/setup-scarb@v1.3.2
+        with:
+          scarb-version: "2.11.4"
+
+      - name: Run Cairo tests
+        run: scarb test
+        working-directory: pons_stark
+
+  build:
+    name: Build Executable
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Scarb
+        uses: software-mansion/setup-scarb@v1.3.2
+        with:
+          scarb-version: "2.11.4"
+
+      - name: Build Cairo program
+        run: scarb build
+        working-directory: pons_stark
+
+      - name: Upload executable artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: cairo-executable
+          path: pons_stark/target/dev/pons_stark.executable.json
+          retention-days: 1

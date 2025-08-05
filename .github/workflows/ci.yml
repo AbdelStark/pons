@@ -1,0 +1,83 @@
+name: Comprehensive CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+permissions: read-all
+
+jobs:
+  # Quick checks first
+  quick-checks:
+    name: Quick Checks
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - name: Setup Scarb
+        uses: software-mansion/setup-scarb@v1.3.2
+        with:
+          scarb-version: "nightly"
+
+      - name: Check all formatting
+        run: |
+          echo "=== Checking Cairo formatting ==="
+          cd pons_stark && scarb fmt --check
+          
+          echo "=== Checking Rust formatting ==="
+          cd ../pons_cli && cargo fmt --check
+
+      - name: Rust clippy
+        run: |
+          cd pons_cli
+          cargo clippy --all-targets --all-features -- -D warnings
+
+  # Cairo workflow
+  cairo-workflow:
+    name: Cairo Workflow
+    needs: quick-checks
+    uses: ./.github/workflows/cairo-test.yml
+
+  # Rust workflow  
+  rust-workflow:
+    name: Rust Workflow
+    needs: quick-checks
+    uses: ./.github/workflows/rust-test.yml
+
+  # Integration test
+  integration-test:
+    name: Integration Test
+    needs: [cairo-workflow, rust-workflow]
+    uses: ./.github/workflows/e2e-test.yml
+
+  # Final status check
+  ci-success:
+    name: CI Success
+    runs-on: ubuntu-latest
+    needs: [quick-checks, cairo-workflow, rust-workflow, integration-test]
+    if: always()
+    steps:
+      - name: Check all jobs status
+        run: |
+          if [[ "${{ needs.quick-checks.result }}" == "success" && \
+                "${{ needs.cairo-workflow.result }}" == "success" && \
+                "${{ needs.rust-workflow.result }}" == "success" && \
+                "${{ needs.integration-test.result }}" == "success" ]]; then
+            echo "✅ All CI jobs passed successfully!"
+            exit 0
+          else
+            echo "❌ Some CI jobs failed:"
+            echo "  Quick checks: ${{ needs.quick-checks.result }}"
+            echo "  Cairo workflow: ${{ needs.cairo-workflow.result }}"
+            echo "  Rust workflow: ${{ needs.rust-workflow.result }}"
+            echo "  Integration test: ${{ needs.integration-test.result }}"
+            exit 1
+          fi

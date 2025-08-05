@@ -1,0 +1,116 @@
+name: End-to-End Testing
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions: read-all
+
+jobs:
+  e2e:
+    name: Full Integration Test
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Python 3.10
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+
+      - name: Setup Rust nightly
+        uses: dtolnay/rust-toolchain@nightly
+        with:
+          toolchain: nightly-2025-01-02
+
+      - name: Setup Rust cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: pons_cli -> target
+
+      - name: Setup Scarb
+        uses: software-mansion/setup-scarb@v1.3.2
+        with:
+          scarb-version: "2.11.4"
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential pkg-config libssl-dev jq
+
+      - name: Install Python dependencies
+        run: |
+          python3.10 -m pip install --upgrade pip
+          python3.10 -m pip install garaga
+
+      - name: Install Stwo Cairo prover
+        run: |
+          # Set default to nightly toolchain
+          rustup default nightly-2025-01-02
+
+          # Clone and build stwo-cairo
+          git clone https://github.com/starkware-libs/stwo-cairo.git /tmp/stwo-cairo
+          cd /tmp/stwo-cairo/cairo-prove
+
+          # Build the prover
+          ./build.sh
+
+          # Install cairo-prove binary
+          sudo cp target/release/cairo-prove /usr/local/bin/
+
+          # Verify installation
+          cairo-prove --help
+
+      - name: Verify installations
+        run: |
+          echo "=== Python Version ==="
+          python3.10 --version
+
+          echo "=== Rust Version ==="
+          rustc --version
+
+          echo "=== Scarb Version ==="
+          scarb --version
+
+          echo "=== Cairo Prove Version ==="
+          cairo-prove --help | head -5
+
+          echo "=== Garaga Installation ==="
+          python3.10 -c "import garaga; print('Garaga installed successfully')"
+
+      - name: Build Cairo program
+        run: |
+          cd pons_stark
+          scarb build
+
+      - name: Build Rust CLI
+        run: |
+          cd pons_cli
+          cargo build --release
+
+      - name: Run end-to-end test
+        run: |
+          chmod +x ./test_e2e.sh
+          ./test_e2e.sh
+
+      - name: Upload test artifacts
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: e2e-test-results
+          path: |
+            e2e_test_output/
+            !e2e_test_output/keypair.json
+          retention-days: 7
+
+      - name: Upload proof file
+        uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: stark-proof
+          path: e2e_test_output/proof.json
+          retention-days: 7
