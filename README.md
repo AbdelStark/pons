@@ -3,7 +3,6 @@
   
   # PONS - Proof of Non-Spam for Bitcoin
   
-  [![Comprehensive CI](https://github.com/AbdelStark/pons/actions/workflows/ci.yml/badge.svg)](https://github.com/AbdelStark/pons/actions/workflows/ci.yml)
   [![Cairo Testing](https://github.com/AbdelStark/pons/actions/workflows/cairo-test.yml/badge.svg)](https://github.com/AbdelStark/pons/actions/workflows/cairo-test.yml)
   [![Rust CLI Testing](https://github.com/AbdelStark/pons/actions/workflows/rust-test.yml/badge.svg)](https://github.com/AbdelStark/pons/actions/workflows/rust-test.yml)
   [![End-to-End Testing](https://github.com/AbdelStark/pons/actions/workflows/e2e-test.yml/badge.svg)](https://github.com/AbdelStark/pons/actions/workflows/e2e-test.yml)
